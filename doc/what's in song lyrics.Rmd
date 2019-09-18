@@ -127,6 +127,7 @@ unique(dt_lyrics$genre)
 ```
 
 ##### There are several genres here and I choose "Hip-Hop" and "Country" which I am interested in.
+##### Is there any pattern in word frequency?
 
 For hip-hop, in my opinion there should be lots of modal particles in the lyrics, such as 'yo','yeah', but these words have been ignored by us through text processing. We would like to see other words appear frequently.
 
@@ -154,7 +155,7 @@ tidy_lyrics%>%
   with(wordcloud(word, n, max.words = 20,colors = pal,scale=c(2,0.5)))
 ```
 
-The most 2 frequent words in hip-hop lyrics are "love" and "shit", apparently we can see from the word cloud.
+The most frequent 2 words in hip-hop lyrics are "love" and "shit", apparently we can see from the word cloud.
 
 What about the word frequency in lyrics of country? 
 ```{r,warning=FALSE, message=FALSE,echo=FALSE}
@@ -184,8 +185,9 @@ tidy_lyrics%>%
 
 ```
 
-Like "hip-hop", The top frequent word in lyrics of country is love. It seems that artist would like to use it in lyrics the most often. I also tried some other types, such as Jazz, Rock. The "love" appears most frequent in lyrics with no surprising.
+Like "hip-hop", The top frequent word in lyrics of country is love. It seems that artist would like to use it in lyrics the most often. I also tried some other types, such as Jazz, Rock. The "love" appears most frequently in lyrics with no surprising.
  
+##### What does word frequency tell? Any emotions?
 When a particular word occurs so many times, it must strengthen something, such as emotions. What kind of sentiments hip-hop would like to bring to us? Therefore I analyze the frequency of words by categoring with different sentiments.
 ```{r,warning=FALSE, message=FALSE,echo=FALSE}
 tidy_lyrics <- subset(dt_lyrics,genre == "Hip-Hop") %>%
@@ -220,7 +222,7 @@ ne = ggplot(data =head(negative) ) +
 grid.arrange(po,ne,ncol=2)
 ```
 
-The most positive frequent word in hip-hop is 'love' which accords with the word frequency analysis without categories above. The most negative frequent word in hip-hop lyrics is "shit". That is not much surprising. Most hip-hop origins underground and the lyrics are used to express the concerns or disaffection. The audience can reach an agreement with it.
+The most positive frequent word in hip-hop is 'love' which accords with the word frequency analysis without categories above. The most negative frequent word in hip-hop lyrics is "shit". That is not much surprising. Most hip-hop origins underground and the lyrics are used to express the concerns or disaffection. The audience will resonate for lyrics.
 
 Let's then see what lyrics of Country convey to us.
 ```{r,warning=FALSE, message=FALSE,echo=FALSE}
@@ -264,7 +266,7 @@ grid.arrange(po,ne,ncol=2)
 
 ```
 
-The most frequent positive word for lyrics of country is the same as that of hip-hop, which is 'love'. Unlike hip-hop, the most frequent negative words for Country are more meaningful,such as leave and cry. Lyrics of Country often tells stories and related to daily life while hip-hop focuses more on expressing sentiments.
+The most frequent positive word for lyrics of country is the same as that of hip-hop, which is 'love'. Unlike hip-hop, the most frequent negative words for Country are more meaningful,such as leave and cry. Lyrics of Country often tell stories and relate to daily life while hip-hop focuses more on expressing sentiments.
 
 ##### Does the word frequency always the same through time?
 ```{r,warning=FALSE, message=FALSE,echo=FALSE}
@@ -385,7 +387,7 @@ grid.arrange(c_2010,c_2000,c_1990,ncol = 2,nrow = 2,top = "country")
 
 ```
 
-Even though the word frequency changes at different times, it seems that "love" is the relatively most frequently used word in lyrics of hip-hip and country at corresponding time.
+Even though the word frequency changes at different times, it seems that "love" is the relatively most frequently used word in lyrics of hip-hip and country at corresponding time. Lyrics contain "love" so that the song becomes more attractive and touching.
 
 
 ##### Above analysis is about a single word, what about two words or even more? Thus, I conduct the analysis about bigrams in order to obtain more hints.
@@ -455,7 +457,7 @@ ggplot(data =head(nosep) ) +
   labs(title = "bigrams for Country")
 ```
 
-For the lyrics of "Country", it is interesting to find that artist uses love often after or before other words.
+For the lyrics of "Country", it is interesting to find that artist uses love often after or before other words. Here again we observe that the essential role of "love".
 
 ##### Taking the data as whole, we would like to compare differnt sentiments in various genre.
 ```{r,warning=FALSE, message=FALSE,echo=FALSE}
@@ -510,7 +512,7 @@ wholeword %>%
   arrange(desc(tf_idf))
 ```
 
-Obviously, for hip-hop, the word 'niggas','shit' seem to be important. In the other words, when we hear lyrics which contain so many such words, we may predict that this is hip-hop.
+Obviously, for hip-hop, the word "niggas","shit" seem to be important. In the other words, when we hear lyrics which contain so many such words, we may predict that this is hip-hop.
 
 #### Conclusion
 1. Different genres of song lyrics may contain various representative words and convey different sentiments.
@@ -519,6 +521,6 @@ Obviously, for hip-hop, the word 'niggas','shit' seem to be important. In the ot
 
 3. The most frequent negative words for Country are more meaningful compared with those of Hip-hop.
 
-4. Hip-hop likes to use two same words together and 'niggas','shit'seem to be important words in lyrics.
+4. Hip-hop likes to use two same words together and "niggas","shit" seem to be important words in lyrics.
 
 5. Rock expresses sentiments the strongest among all genres, while hip-hop expresses sentiments stronger than that of Country.
