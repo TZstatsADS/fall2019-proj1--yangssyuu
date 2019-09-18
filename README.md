@@ -18,6 +18,15 @@ Term: Fall 2019
   3. bigram words frequency
   4. comparison of sentiments of all genres
   5. important words in lyrics of different genres
++ Conclusion
+
+1. Most lyrics would like to contain positive word "love".
+
+2. The most frequent negative words for Country are more meaningful compared with those of Hip-hop.
+
+3. Hip-hop likes to use two same words together and 'niggas','shit' seem to be important words in lyrics.
+
+4. Rock expresses sentiments the strongest among all genres, while hip-hop expresses sentiments stronger than that of Country.
 
 Following [suggestions](http://nicercode.github.io/blog/2013-04-05-projects/) by [RICH FITZJOHN](http://nicercode.github.io/about/#Team) (@richfitz). This folder is orgarnized as follows.
 
