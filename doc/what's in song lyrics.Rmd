@@ -1,0 +1,524 @@
+---
+title: "What's in song lyrics, such as Hip-Hop and Country"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries, warning=FALSE,message=FALSE,echo=FALSE}
+library(tm)
+library(data.table)
+library(tidytext)
+library(tidyverse)
+library(DT)
+library(textdata)
+library(janeaustenr)
+library(stringr)
+library(dplyr)
+library(wordcloud)
+library(ggplot2)
+library(tidyr)
+library(RColorBrewer)
+library(gridExtra)
+```
+
+```{r, warning=FALSE, message=FALSE,echo = FALSE}
+# load lyrics data
+load("/Users/ss/Desktop/fall2019-proj1--yangssyuu/data/lyrics.RData") 
+```
+
+```{r text processing in tm,warning=FALSE, message=FALSE,echo=FALSE}
+# function for removimg leading and trailing whitespace from character strings 
+leadingWhitespace <- content_transformer(function(x) str_trim(x, side = "both"))
+# clean the data and make a corpus
+corpus <- VCorpus(VectorSource(dt_lyrics$lyrics))%>%
+  tm_map(content_transformer(tolower))%>%
+  tm_map(removePunctuation)%>%
+  tm_map(removeNumbers)%>%
+  tm_map(removeWords, character(0))%>%
+  tm_map(stripWhitespace)
+
+```
+
+
+```{r stemming, warning=FALSE, message=FALSE,echo=FALSE}
+stemmed <- tm_map(corpus, stemDocument) %>%
+  tidy() %>%
+  select(text)
+```
+
+
+```{r tidy dictionary, warning=FALSE, message=FALSE,echo=FALSE}
+dict <- tidy(corpus) %>%
+  select(text) %>%
+  unnest_tokens(dictionary, text)
+```
+
+```{r, warning=FALSE, message=FALSE,echo=FALSE}
+# remove stop words
+data("stop_words")
+word <- c("lot", "today", "months", "month", "wanna", "wouldnt", "wasnt", "ha", "na", "ooh", "da",
+        "gonna", "im", "dont", "aint", "wont", "yeah", "la", "oi", "nigga", "fuck",
+          "hey", "year", "years", "last", "past", "feel","yo","ya","yuh")
+stop_words <- stop_words %>%
+  bind_rows(mutate(tibble(word), lexicon = "updated"))
+```
+
+
+```{r tidy stems with dictionary, warning=FALSE, message=FALSE,echo=FALSE}
+completed <- stemmed %>%
+  mutate(id = row_number()) %>%
+  unnest_tokens(stems, text) %>%
+  bind_cols(dict) %>%
+  anti_join(stop_words, by = c("dictionary" = "word"))
+  
+```
+
+```{r stem completion, warning=FALSE, message=FALSE,echo=FALSE}
+completed <- completed %>%
+  group_by(stems) %>%
+  count(dictionary) %>%
+  mutate(word = dictionary[which.max(n)]) %>%
+  ungroup() %>%
+  select(stems, word) %>%
+  distinct() %>%
+  right_join(completed) %>%
+  select(-stems)
+```
+
+
+
+```{r reverse unnest, warning=FALSE, message=FALSE,echo=FALSE}
+completed <- completed %>%
+  group_by(id) %>%
+  summarise(stemmedwords= str_c(word, collapse = " ")) %>%
+  ungroup()
+```
+
+
+```{r cleaned hm_data,warning=FALSE, message=FALSE,echo=FALSE}
+dt_lyrics <- dt_lyrics %>%
+  mutate(id = row_number()) %>%
+  inner_join(completed)
+```
+
+
+```{r export data, warning=FALSE, message=FALSE,echo=FALSE}
+save(dt_lyrics, file="/Users/ss/Desktop/fall2019-proj1--yangssyuu/output/processed_lyrics.csv")
+
+```
+
+
+The goal of this project is to look deeper into the patterns and characteristics of different types of song lyrics.
+You can read more about the whole dataset 380,000+ song lyrics data on [Kaggle](https://www.kaggle.com/gyani95/380000-lyrics-from-metrolyrics). But I only use a subset of this dataset to conduct data analysis in this report.
+
+Reference resources: https://www.tidytextmining.com
+
+First, I load the raw data 'lyrics.RData' saved in data file. After text processing, I save it in output file as 'processed_lyrics.csv'.
+
+##### For different genres, I would like to explore their most frequent word and the relationship between adjacent words to see whether there is interesting pattern.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+load("/Users/ss/Desktop/fall2019-proj1--yangssyuu/output/processed_lyrics.csv")
+unique(dt_lyrics$genre)
+```
+
+##### There are several genres here and I choose "Hip-Hop" and "Country" which I am interested in.
+
+For hip-hop, in my opinion there should be lots of modal particles in the lyrics, such as 'yo','yeah', but these words have been ignored by us through text processing. We would like to see other words appear frequently.
+
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+#for hiphop
+tidy_lyrics <- subset(dt_lyrics,genre == "Hip-Hop") %>%
+  unnest_tokens(word,stemmedwords)
+data(stop_words)
+tidy_lyrics <- tidy_lyrics %>%
+  anti_join(stop_words,by = 'word')
+
+tidy_lyrics %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 8000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("word frequency in Hip-hop")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()+
+  theme(plot.margin = margin(1,3,1,3,"cm"))
+pal <-brewer.pal(8,"Dark2")
+tidy_lyrics%>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 20,colors = pal,scale=c(2,0.5)))
+```
+
+The most 2 frequent words in hip-hop lyrics are "love" and "shit", apparently we can see from the word cloud.
+
+What about the word frequency in lyrics of country? 
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+tidy_lyrics <- subset(dt_lyrics,genre == "Country") %>%
+  unnest_tokens(word,stemmedwords)
+
+
+tidy_lyrics <- tidy_lyrics %>%
+  anti_join(stop_words,by = 'word')
+
+
+
+tidy_lyrics %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 4000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()+
+  ggtitle("word frequency in Country") +
+  theme(plot.margin = margin(1,3,1,3,"cm"))
+
+tidy_lyrics%>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 20,colors = pal,scale=c(3,0.8)))
+
+```
+
+Like "hip-hop", The top frequent word in lyrics of country is love. It seems that artist would like to use it in lyrics the most often. I also tried some other types, such as Jazz, Rock. The "love" appears most frequent in lyrics with no surprising.
+ 
+When a particular word occurs so many times, it must strengthen something, such as emotions. What kind of sentiments hip-hop would like to bring to us? Therefore I analyze the frequency of words by categoring with different sentiments.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+tidy_lyrics <- subset(dt_lyrics,genre == "Hip-Hop") %>%
+  unnest_tokens(word,stemmedwords)
+nrc_negative <- get_sentiments("nrc") %>% 
+  filter(sentiment == "negative")
+
+nrc_positive <- get_sentiments("nrc") %>% 
+  filter(sentiment == "positive")
+
+
+negative = tidy_lyrics %>%
+  inner_join(nrc_negative,by = 'word') %>%
+  count(word, sort = TRUE)
+
+positive = tidy_lyrics %>%
+  inner_join(nrc_positive,by = 'word') %>%
+  count(word, sort = TRUE)
+
+
+positive$word = factor(positive$word,as.character(positive$word))
+negative$word = factor(negative$word,as.character(negative$word))
+
+po = ggplot(data =head(positive) ) +
+  geom_col(aes(x = word, y = n))+
+  labs(title = "positive words for Hip-hop") 
+
+ne = ggplot(data =head(negative) ) +
+  geom_col(aes(x = word, y = n)) +
+  ggtitle("negative words for Hip-hop")
+
+grid.arrange(po,ne,ncol=2)
+```
+
+The most positive frequent word in hip-hop is 'love' which accords with the word frequency analysis without categories above. The most negative frequent word in hip-hop lyrics is "shit". That is not much surprising. Most hip-hop origins underground and the lyrics are used to express the concerns or disaffection. The audience can reach an agreement with it.
+
+Let's then see what lyrics of Country convey to us.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+tidy_lyrics <- subset(dt_lyrics,genre == "Country") %>%
+  unnest_tokens(word,stemmedwords)
+nrc_negative <- get_sentiments("nrc") %>% 
+  filter(sentiment == "negative")
+
+nrc_positive <- get_sentiments("nrc") %>% 
+  filter(sentiment == "positive")
+
+
+
+negative = tidy_lyrics %>%
+  
+  inner_join(nrc_negative,by = 'word') %>%
+  count(word, sort = TRUE)
+
+
+
+positive = tidy_lyrics %>%
+  
+  inner_join(nrc_positive,by = 'word') %>%
+  count(word, sort = TRUE)
+
+
+positive$word = factor(positive$word,as.character(positive$word))
+negative$word = factor(negative$word,as.character(negative$word))
+
+
+
+po = ggplot(data =head(positive) ) +
+  geom_col(aes(x = word, y = n))+
+  labs(title = "positive word for Country")
+
+ne = ggplot(data =head(negative) ) +
+  geom_col(aes(x = word, y = n)) +
+  ggtitle("negative word for Country")
+
+grid.arrange(po,ne,ncol=2)
+
+```
+
+The most frequent positive word for lyrics of country is the same as that of hip-hop, which is 'love'. Unlike hip-hop, the most frequent negative words for Country are more meaningful,such as leave and cry. Lyrics of Country often tells stories and related to daily life while hip-hop focuses more on expressing sentiments.
+
+##### Does the word frequency always the same through time?
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+hiphop = subset(dt_lyrics,genre == "Hip-Hop")
+hiphop <- subset(hiphop,year %in% c(2010,2011,2012,2013,2014,2015,2016)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+hiphop <- hiphop %>%
+  anti_join(stop_words,by = 'word')
+
+h_2010 <- hiphop %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 3000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("2010s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+
+hiphop = subset(dt_lyrics,genre == "Hip-Hop")
+hiphop <- subset(hiphop,year %in% seq(2000,2009,1)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+hiphop <- hiphop %>%
+  anti_join(stop_words,by = 'word')
+
+h_2000 <- hiphop %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 7000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("2000s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+hiphop = subset(dt_lyrics,genre == "Hip-Hop")
+hiphop <- subset(hiphop,year %in% seq(1990,1999,1)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+hiphop <- hiphop %>%
+  anti_join(stop_words,by = 'word')
+
+h_1990 <- hiphop %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 200) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("1990s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+grid.arrange(h_2010,h_2000,h_1990,ncol = 2,nrow = 2,top = "hip-hop")
+
+
+c = subset(dt_lyrics,genre == "Country")
+c <- subset(c,year %in% c(2010,2011,2012,2013,2014,2015,2016)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+c <- c %>%
+  anti_join(stop_words,by = 'word')
+
+c_2010 <- c %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 1000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("2010s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+
+c = subset(dt_lyrics,genre == "Country")
+c <- subset(c,year %in% seq(2000,2009,1)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+c <- c %>%
+  anti_join(stop_words,by = 'word')
+
+c_2000 <- c %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 3000) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("2000s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+c = subset(dt_lyrics,genre == "Country")
+c <- subset(c,year %in% seq(1990,1999,1)) %>%
+  unnest_tokens(word,stemmedwords)
+
+data(stop_words)
+c <- c %>%
+  anti_join(stop_words,by = 'word')
+
+c_1990 <- c %>%
+  count(word, sort = TRUE) %>%
+  filter(n > 90) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  ggtitle("1990s")+
+  geom_col() +
+  xlab(NULL) +
+  coord_flip()
+
+grid.arrange(c_2010,c_2000,c_1990,ncol = 2,nrow = 2,top = "country")
+
+```
+
+Even though the word frequency changes at different times, it seems that "love" is the relatively most frequently used word in lyrics of hip-hip and country at corresponding time.
+
+
+##### Above analysis is about a single word, what about two words or even more? Thus, I conduct the analysis about bigrams in order to obtain more hints.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+lyrics <- subset(dt_lyrics,genre == "Hip-Hop") %>%
+  unnest_tokens(word,stemmedwords)
+
+hiphopbigram <- lyrics %>%
+  unnest_tokens(bigram,word,token = "ngrams",n=2)
+
+
+
+sep <- hiphopbigram %>%
+  separate(bigram,c("w1","w2"),sep = " ")
+nostopword <- sep %>%
+  filter(!w1 %in% stop_words$word) %>%
+  filter(!w2 %in% stop_words$word)
+
+
+bigramword <- nostopword %>%
+  count(w1,w2,sort = T )
+
+bigramword
+
+nosep = bigramword %>%
+  unite(bigramword,c("w1","w2"))
+
+nosep$bigramword = factor(nosep$bigramword,as.character(nosep$bigramword))
+ggplot(data =head(nosep) ) +
+  geom_col(aes(x = bigramword, y = n)) +
+  coord_flip()+
+  theme(plot.margin = margin(2,3,2,3,"cm"))+
+  labs(title = "bigrams for Hip-hop")
+```
+
+We can observe the patterns of two pairs of most frequent adjacent words are coincident with our knowledge of hip-hop. Hiphop uses two same word together to strengthen emotion or produce flow.
+
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+lyrics <- subset(dt_lyrics,genre == "Country") %>%
+  unnest_tokens(word,stemmedwords)
+
+hiphopbigram <- lyrics %>%
+  unnest_tokens(bigram,word,token = "ngrams",n=2)
+
+
+
+sep <- hiphopbigram %>%
+  separate(bigram,c("w1","w2"),sep = " ")
+nostopword <- sep %>%
+  filter(!w1 %in% stop_words$word) %>%
+  filter(!w2 %in% stop_words$word)
+
+
+bigramword <- nostopword %>%
+  count(w1,w2,sort = T )
+
+bigramword
+
+nosep = bigramword %>%
+  unite(bigramword,c("w1","w2"))
+
+nosep$bigramword = factor(nosep$bigramword,as.character(nosep$bigramword))
+ggplot(data =head(nosep) ) +
+  geom_col(aes(x = bigramword, y = n)) +
+  coord_flip()+
+  theme(plot.margin = margin(2,3,2,3,"cm"))+
+  labs(title = "bigrams for Country")
+```
+
+For the lyrics of "Country", it is interesting to find that artist uses love often after or before other words.
+
+##### Taking the data as whole, we would like to compare differnt sentiments in various genre.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+unique(get_sentiments("nrc")$sentiment)
+tidy = list()
+for (i in 1:12){
+  tidy[[i]] = subset(dt_lyrics,genre == unique(dt_lyrics$genre)[i]) %>%
+  unnest_tokens(word,stemmedwords)
+}
+
+
+s =list()
+for(i in 1:length(unique(get_sentiments("nrc")$sentiment))){
+  s[[i]] = get_sentiments("nrc") %>% 
+  filter(sentiment == unique(get_sentiments("nrc")$sentiment)[i])
+}
+
+
+#for hip-hop
+mean_count = matrix(NA,12,10)
+mean_c = c()
+sentiment_word = list()
+for(j in 1:12){
+  for(i in 1:length(unique(get_sentiments("nrc")$sentiment))){
+  sentiment_word[[i]] = tidy[[j]] %>%
+  inner_join(s[[i]],by = 'word') %>%
+  count(word, sort = TRUE)
+  mean_c[i] = mean(sentiment_word[[i]]$n)
+  }
+  mean_count[j,] = mean_c
+}
+
+name = unique(get_sentiments("nrc")$sentiment)
+row.names(mean_count) = unique(dt_lyrics$genre)
+colnames(mean_count) = name
+heatmap(data.matrix(mean_count), scale="none",Rowv=NA, Colv=NA, margins=c(10,0.5))
+
+```
+
+I count the average number of each sentiment words according to genres. The above graph shows that lyrics of country show both less positive and negative sentiments than those of hip-hop. As expected, Hip-hop expresses sentiments more intensively than that of Country. Furthermore, Rock express strongest all types of sentiments.
+
+##### If knowing some words in lyrics, can we know what kind of genre it is? We would to like to investigate some important words in each genre.
+```{r,warning=FALSE, message=FALSE,echo=FALSE}
+wholewordcount = dt_lyrics %>%
+  unnest_tokens(word,stemmedwords) %>%
+  count(genre,word,sort=T)
+
+  
+wholeword <- wholewordcount %>%
+  bind_tf_idf(word,genre,n)
+wholeword %>%
+  arrange(desc(tf_idf))
+```
+
+Obviously, for hip-hop, the word 'niggas','shit' seem to be important. In the other words, when we hear lyrics which contain so many such words, we may predict that this is hip-hop.
+
+#### Conclusion
+1. Different genres of song lyrics may contain various representative words and convey different sentiments.
+
+2. Most lyrics would like to contain positive word "love".
+
+3. The most frequent negative words for Country are more meaningful compared with those of Hip-hop.
+
+4. Hip-hop likes to use two same words together and 'niggas','shit'seem to be important words in lyrics.
+
+5. Rock expresses sentiments the strongest among all genres, while hip-hop expresses sentiments stronger than that of Country.
