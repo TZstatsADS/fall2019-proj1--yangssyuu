@@ -1,7 +1,7 @@
 # Applied Data Science @ Columbia
 ## Fall 2019
 ## Project 1: A "data story" on the lyrics of songs
-![avatar](/Users/ss/Desktop/fall2019-proj1--yangssyuu/figs/wordcloud.png)
+![avatar](https://github.com/TZstatsADS/fall2019-proj1--yangssyuu/blob/master/figs/wordcloud.png)
 
 ### [Project Description](doc/)
 This is the first and only *individual* (as opposed to *team*) this semester. 
